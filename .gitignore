@@ -1,0 +1,6 @@
+/.bsp/
+/.gradle/
+/.idea/
+/.scala-build/
+/build/
+/out/
