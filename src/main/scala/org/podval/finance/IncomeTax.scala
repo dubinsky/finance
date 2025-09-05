@@ -1,6 +1,7 @@
 package org.podval.finance
 
-import org.podval.finance.IncomeTax.{Bracket, BracketWithNext, toInt, fromRate, toRate}
+import org.podval.finance.IncomeTax.BracketWithNext
+import org.podval.finance.Util.{toInt, fromRate, toRate}
 
 final class IncomeTax(
   income: Int,
@@ -9,9 +10,9 @@ final class IncomeTax(
 ):
   require(federalTaxDeductible <= income)
 
-  override def toString: String = s"net $net: ${toInt(amount)}@$rate"
-  
-  def net: Int = toInt(income.toDouble - amount)
+  override def toString: String = s"net $$$net tax $$${toInt(amount)} rate $rate%"
+
+  def net: Int = toInt(income - amount)
 
   def rate: Int = toRate(amount, income)
 
@@ -23,7 +24,7 @@ final class IncomeTax(
 
   def federalByBracket: String =
     val details = brackets
-      .map(bracket => s"${toInt(amountInBracket(bracket))}(${incomeInBracket(bracket)}@${bracket.bracket.rate}%)")
+      .map(bracket => s"$$${toInt(amountInBracket(bracket))}($$${incomeInBracket(bracket)}@${bracket.bracket.rate}%)")
       .mkString("+")
     s"${toInt(federal)}@$federalRate%: $details"
 
@@ -35,27 +36,21 @@ final class IncomeTax(
     .bracketsWithNext
     .takeWhile(bracket => threshhold(bracket.bracket) < federalIncome)
 
-  private def threshhold(bracket: Bracket) = if isSingle then bracket.single else bracket.jointly
-    
+  private def threshhold(bracket: IncomeTax.Bracket) = if isSingle then bracket.single else bracket.jointly
+
   private def incomeInBracket(bracket: BracketWithNext) =
     Math.min(federalIncome, threshhold(bracket.next)) - threshhold(bracket.bracket)
 
-  private def amountInBracket(bracket: BracketWithNext): Double = 
+  private def amountInBracket(bracket: BracketWithNext): Double =
     incomeInBracket(bracket) * fromRate(bracket.bracket.rate)
 
 object IncomeTax:
-  def fromRate(rate: Int): Double = rate.toDouble / 100.0
-  
-  def toRate(part: Double, whole: Double): Int = toInt(part / whole * 100.0)
-  
-  def toInt(amount: Double): Int = amount.round.toInt
-  
   private val maStateFlatRate: Int = 5
   
   private final class Bracket(val rate: Int, val single: Int, val jointly: Int)
 
   private final class BracketWithNext(val bracket: Bracket, val next: Bracket)
-  
+
   // https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2025
   private val brackets: List[Bracket] = List(
     Bracket(10,      0,      0),
